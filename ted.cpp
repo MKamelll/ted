@@ -18,12 +18,17 @@ class Editor {
 public:
     Editor();
 
-    Editor *push(char c);
+    Editor *insert(char c);
+    Editor *remove();
+    Editor *push();
     Editor *pop();
     size_t len();
     vector<string> &lines();
     int x();
     int y();
+
+    Editor *handle_backspace();
+    Editor *handle_enter();
 
 private:
     vector<string> buffer;
@@ -37,23 +42,51 @@ Editor::Editor() {
     cursor_y = 0;
 }
 
-Editor *Editor::push(char c) {
-    buffer[cursor_y].push_back(c);
-    cursor_x++;
-    return this;
-}
-
-Editor *Editor::pop() {
-    buffer[cursor_y].pop_back();
-    cursor_x = max(0, cursor_x - 1);
-    return this;
-}
-
 size_t Editor::len() { return buffer.size(); }
 
 int Editor::x() { return cursor_x; }
 int Editor::y() { return cursor_y; }
 vector<string> &Editor::lines() { return buffer; }
+
+Editor *Editor::push() {
+    buffer.push_back("");
+    cursor_y++;
+    return this;
+}
+
+Editor *Editor::pop() {
+    buffer.pop_back();
+    cursor_y = max(0, cursor_y - 1);
+    return this;
+}
+
+Editor *Editor::insert(char c) {
+    buffer[cursor_y].insert(cursor_x, 1, c);
+    cursor_x++;
+    return this;
+}
+
+Editor *Editor::remove() {
+    cursor_x = max(0, cursor_x - 1);
+    buffer[cursor_y].erase(cursor_x);
+    return this;
+}
+
+Editor *Editor::handle_backspace() {
+    if (cursor_y == 0 && cursor_x == 0) {
+        return this;
+    }
+
+    if (cursor_y > 0 && cursor_x == 0) {
+        cursor_x = buffer[cursor_y - 1].size();
+        buffer[cursor_y - 1].insert(cursor_x, buffer[cursor_y]);
+        pop();
+    } else {
+        remove();
+    }
+
+    return this;
+}
 
 int main(int argc, char **argv) {
 
@@ -78,8 +111,12 @@ int main(int argc, char **argv) {
         int ch;
         while ((ch = GetCharPressed()) > 0) {
             if (isascii(ch)) {
-                editor->push(static_cast<char>(ch));
+                editor->insert(static_cast<char>(ch));
             }
+        }
+
+        if (IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE)) {
+            editor->handle_backspace();
         }
 
         EndDrawing();
